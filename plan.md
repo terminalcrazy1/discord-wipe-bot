@@ -1,6 +1,5 @@
 ```/wipe-schedule [DD-MM HH:MM]```
 - ask all @owns-rust users if they wish to partipate, and gives them the @wipe role if they do
-- reminds @wipe users at wipe time
 
 ```/wipe-end```
 - remove @wipe role from all users
