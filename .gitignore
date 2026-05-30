@@ -1,0 +1,10 @@
+# Secrets
+credentials.json
+config.json
+
+# Virtual Environment
+bin
+include
+lib
+lib64
+pyvenv.cfg
