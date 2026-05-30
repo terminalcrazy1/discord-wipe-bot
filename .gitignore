@@ -1,6 +1,6 @@
 # Secrets
 credentials.json
-config.json
+data.json
 
 # Virtual Environment
 bin
