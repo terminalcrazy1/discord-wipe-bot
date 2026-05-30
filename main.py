@@ -66,6 +66,17 @@ class AdminApprovalView(discord.ui.View):
             pass
 
         data["accepted_roles"][str(self.applicant_id)] = self.requested_role
+
+        if str(self.applicant_id) in data.get("pending_wipe_joins", []):
+            wipe_role = discord.utils.get(guild.roles, name="wipe")
+            if wipe_role:
+                try:
+                    await applicant.add_roles(wipe_role)
+                except discord.Forbidden:
+                    pass
+            if "pending_wipe_joins" in data:
+                data["pending_wipe_joins"].remove(str(self.applicant_id))
+
         save_data(data)
 
         # Update view
@@ -168,6 +179,13 @@ class JoinWipeView(discord.ui.View):
             else:
                 await interaction.response.send_message("The wipe role doesn't exist.", ephemeral=True)
         else:
+            data = load_data()
+            if "pending_wipe_joins" not in data:
+                data["pending_wipe_joins"] = []
+            if str(interaction.user.id) not in data["pending_wipe_joins"]:
+                data["pending_wipe_joins"].append(str(interaction.user.id))
+                save_data(data)
+
             try:
                 guild_id = interaction.guild.id
                 await interaction.user.send("You need a role to join the wipe. Click below to apply for a role:", view=ApplyView(guild_id))
@@ -213,6 +231,7 @@ async def wipe_schedule(interaction: discord.Interaction, time_str: str):
     data["schedule"] = dt.timestamp()
     data["guild_id"] = interaction.guild.id
     data["channel_id"] = interaction.channel.id
+    data["pending_wipe_joins"] = []
     save_data(data)
     
     role = discord.utils.get(interaction.guild.roles, name="owns-rust")
@@ -252,6 +271,7 @@ async def trigger_wipe(guild, channel, data):
 async def wipe_cancel(interaction: discord.Interaction, message: str):
     data = load_data()
     data["schedule"] = None
+    data["pending_wipe_joins"] = []
     save_data(data)
     
     guild = interaction.guild
@@ -270,6 +290,10 @@ async def wipe_cancel(interaction: discord.Interaction, message: str):
 
 @bot.tree.command(name="wipe-end", description="End the wipe")
 async def wipe_end(interaction: discord.Interaction):
+    data = load_data()
+    data["pending_wipe_joins"] = []
+    save_data(data)
+
     guild = interaction.guild
     wipe_role = discord.utils.get(guild.roles, name="wipe")
     
