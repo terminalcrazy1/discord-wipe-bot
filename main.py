@@ -7,191 +7,77 @@ from datetime import datetime
 
 def load_data():
     if not os.path.exists("data.json"):
-        return {"accepted_roles": {}}
+        return {"karma": {}, "choices": {}}
     with open("data.json", "r") as f:
-        data = json.load(f)
-        if "accepted_roles" not in data:
-            data["accepted_roles"] = {}
-        return data
+        return json.load(f)
 
 def save_data(data):
     with open("data.json", "w") as f:
         json.dump(data, f, indent=4)
 
-class AdminApprovalView(discord.ui.View):
-    def __init__(self, applicant_id: int, requested_role: str, guild_id: int):
-        super().__init__(timeout=None)
-        self.applicant_id = applicant_id
-        self.requested_role = requested_role.strip()
-        self.guild_id = guild_id
-
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success)
-    async def accept_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        guild = bot.get_guild(self.guild_id)
-        if not guild:
-            await interaction.followup.send("Guild not found.", ephemeral=True)
-            return
-            
-        applicant = guild.get_member(self.applicant_id)
-        if not applicant:
-            await interaction.followup.send("User is no longer in the server.", ephemeral=True)
-            return
-
-        data = load_data()
-        
-        # Remove old role if exists
-        old_role_name = data["accepted_roles"].get(str(self.applicant_id))
-        if old_role_name:
-            old_role = discord.utils.get(guild.roles, name=old_role_name)
-            if old_role and old_role in applicant.roles:
-                try:
-                    await applicant.remove_roles(old_role)
-                except discord.Forbidden:
-                    pass
-
-        # Find or create new role
-        new_role = discord.utils.get(guild.roles, name=self.requested_role)
-        if not new_role:
-            try:
-                new_role = await guild.create_role(name=self.requested_role)
-            except discord.Forbidden:
-                await interaction.followup.send("Missing permissions to create roles.", ephemeral=True)
-                return
-
-        # Give new role
-        try:
-            await applicant.add_roles(new_role)
-        except discord.Forbidden:
-            pass
-
-        data["accepted_roles"][str(self.applicant_id)] = self.requested_role
-
-        if str(self.applicant_id) in data.get("pending_wipe_joins", []):
-            wipe_role = discord.utils.get(guild.roles, name="wipe")
-            if wipe_role:
-                try:
-                    await applicant.add_roles(wipe_role)
-                except discord.Forbidden:
-                    pass
-            if "pending_wipe_joins" in data:
-                data["pending_wipe_joins"].remove(str(self.applicant_id))
-
-        save_data(data)
-
-        # Update view
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(content=f"{interaction.message.content}\n\n**Result:** Accepted", view=self)
-        
-        # Notify user
-        try:
-            await applicant.send(f"Your application for **{self.requested_role}** has been accepted!")
-        except discord.Forbidden:
-            pass
-
-    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger)
-    async def deny_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        guild = bot.get_guild(self.guild_id)
-        
-        # Update view
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(content=f"{interaction.message.content}\n\n**Result:** Denied", view=self)
-
-        if not guild: return
-        applicant = guild.get_member(self.applicant_id)
-        if applicant:
-            try:
-                await applicant.send(f"Your application for **{self.requested_role}** has been denied.")
-            except discord.Forbidden:
-                pass
-
-class ApplicationModal(discord.ui.Modal, title='Role Application'):
-    role_text = discord.ui.TextInput(
-        label='What role are you applying for?',
-        style=discord.TextStyle.short,
-        placeholder='Builder',
-        required=True
-    )
-    
-    def __init__(self, guild_id: int = None):
-        super().__init__()
-        self.custom_guild_id = guild_id
-        
-    async def on_submit(self, interaction: discord.Interaction):
-        valid_roles = ["builder", "farmer", "fighter"]
-        if self.role_text.value.strip().lower() not in valid_roles:
-            await interaction.response.send_message("Invalid role. Please apply for Builder, Farmer, or Fighter.", ephemeral=True)
-            return
-
-        guild_id = self.custom_guild_id or interaction.guild_id
-        guild = bot.get_guild(guild_id) if guild_id else None
-        owner = guild.owner if guild else None
-        
-        if owner:
-            try:
-                await owner.send(
-                    f"Application from {interaction.user.mention} ({interaction.user}):\n"
-                    f"**Role:** {self.role_text.value}",
-                    view=AdminApprovalView(interaction.user.id, self.role_text.value, guild_id)
-                )
-            except discord.Forbidden:
-                pass
-        await interaction.response.send_message("Your application has been sent to the server owner.", ephemeral=True)
-
-class ApplyView(discord.ui.View):
-    def __init__(self, guild_id: int = None):
-        super().__init__(timeout=None)
-        self.custom_guild_id = guild_id
-        if guild_id:
-            for child in self.children:
-                child.custom_id = os.urandom(16).hex()
-
-    @discord.ui.button(label="Apply for Role", style=discord.ButtonStyle.primary, custom_id="apply_role_btn")
-    async def apply_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild_id = self.custom_guild_id or interaction.guild_id
-        await interaction.response.send_modal(ApplicationModal(guild_id))
-
-class JoinWipeView(discord.ui.View):
+class RoleChoiceView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Join Wipe", style=discord.ButtonStyle.success, custom_id="join_wipe_btn")
-    async def join_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        valid_roles = ["builder", "farmer", "fighter"]
-        
-        if not interaction.guild:
-            await interaction.response.send_message("This can only be used in a server.", ephemeral=True)
-            return
+    @discord.ui.button(label="Builder", style=discord.ButtonStyle.primary, custom_id="choice_builder")
+    async def builder_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.save_choice(interaction, "builder")
 
-        has_role = any(role.name.lower() in valid_roles for role in interaction.user.roles)
-        
-        if has_role:
-            wipe_role = discord.utils.get(interaction.guild.roles, name="wipe")
-            if wipe_role:
-                try:
-                    await interaction.user.add_roles(wipe_role)
-                    await interaction.response.send_message("You have successfully joined the wipe!", ephemeral=True)
-                except discord.Forbidden:
-                    await interaction.response.send_message("I don't have permission to assign the wipe role.", ephemeral=True)
-            else:
-                await interaction.response.send_message("The wipe role doesn't exist.", ephemeral=True)
-        else:
-            data = load_data()
-            if "pending_wipe_joins" not in data:
-                data["pending_wipe_joins"] = []
-            if str(interaction.user.id) not in data["pending_wipe_joins"]:
-                data["pending_wipe_joins"].append(str(interaction.user.id))
-                save_data(data)
+    @discord.ui.button(label="Farmer", style=discord.ButtonStyle.success, custom_id="choice_farmer")
+    async def farmer_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.save_choice(interaction, "farmer")
 
-            try:
-                guild_id = interaction.guild.id
-                await interaction.user.send("You need a role to join the wipe. Click below to apply for a role:", view=ApplyView(guild_id))
-                await interaction.response.send_message("I've sent you a DM with instructions to apply for a role.", ephemeral=True)
-            except discord.Forbidden:
-                await interaction.response.send_message("You need a role to join the wipe. Please enable DMs to apply.", ephemeral=True)
+    @discord.ui.button(label="Fighter", style=discord.ButtonStyle.danger, custom_id="choice_fighter")
+    async def fighter_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.save_choice(interaction, "fighter")
+
+    async def save_choice(self, interaction: discord.Interaction, choice: str):
+        data = load_data()
+        user_id = str(interaction.user.id)
+        if "choices" not in data: data["choices"] = {}
+        data["choices"][user_id] = choice
+        save_data(data)
+        await interaction.response.send_message(f"You have chosen **{choice}**.", ephemeral=True)
+
+class ParticipateView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Participate", style=discord.ButtonStyle.green, custom_id="participate_btn")
+    async def participate_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role = discord.utils.get(interaction.guild.roles, name="wipe")
+        if role:
+            await interaction.user.add_roles(role)
+        await interaction.response.send_message("Awesome! Please choose your preferred role for the wipe:", view=RoleChoiceView(), ephemeral=True)
+
+class RatingView(discord.ui.View):
+    def __init__(self, rater_id: int, target_id: int, total_wipes: int):
+        super().__init__(timeout=None)
+        self.rater_id = rater_id
+        self.target_id = target_id
+        self.total_wipes = total_wipes
+
+    async def record_rating(self, interaction: discord.Interaction, rating: int):
+        data = load_data()
+        target_str = str(self.target_id)
+        
+        if "karma" not in data:
+            data["karma"] = {}
+        if target_str not in data["karma"]:
+            data["karma"][target_str] = 0.0
+            
+        data["karma"][target_str] += rating / self.total_wipes
+        save_data(data)
+        await interaction.response.edit_message(content=f"You rated them a {rating}.", view=None)
+
+    @discord.ui.button(label="1", style=discord.ButtonStyle.danger)
+    async def btn1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.record_rating(interaction, 1)
+    @discord.ui.button(label="2", style=discord.ButtonStyle.primary)
+    async def btn2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.record_rating(interaction, 2)
+    @discord.ui.button(label="3", style=discord.ButtonStyle.primary)
+    async def btn3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.record_rating(interaction, 3)
+    @discord.ui.button(label="4", style=discord.ButtonStyle.success)
+    async def btn4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.record_rating(interaction, 4)
 
 class WipeBot(commands.Bot):
     def __init__(self):
@@ -201,15 +87,15 @@ class WipeBot(commands.Bot):
         )
 
     async def setup_hook(self):
-        self.add_view(ApplyView())
-        self.add_view(JoinWipeView())
+        self.add_view(ParticipateView())
+        self.add_view(RoleChoiceView())
         await self.tree.sync()
         check_wipe_schedule.start()
 
 bot = WipeBot()
 
 async def ensure_roles(guild):
-    role_names = ["owns-rust", "wipe"]
+    role_names = ["owns-rust", "wipe", "builder", "farmer", "fighter"]
     for name in role_names:
         if not discord.utils.get(guild.roles, name=name):
             await guild.create_role(name=name)
@@ -231,13 +117,13 @@ async def wipe_schedule(interaction: discord.Interaction, time_str: str):
     data["schedule"] = dt.timestamp()
     data["guild_id"] = interaction.guild.id
     data["channel_id"] = interaction.channel.id
-    data["pending_wipe_joins"] = []
+    data["choices"] = {}
     save_data(data)
     
     role = discord.utils.get(interaction.guild.roles, name="owns-rust")
     mention = role.mention if role else "@owns-rust"
     
-    await interaction.response.send_message(f"{mention} A new wipe is scheduled for {time_str}.", view=JoinWipeView())
+    await interaction.response.send_message(f"{mention} A new wipe is scheduled for {time_str}. Are you participating?", view=ParticipateView())
 
 @tasks.loop(minutes=1)
 async def check_wipe_schedule():
@@ -259,13 +145,63 @@ async def check_wipe_schedule():
 
 async def trigger_wipe(guild, channel, data):
     wipe_role = discord.utils.get(guild.roles, name="wipe")
+    if not wipe_role: return
     
-    if channel:
-        if wipe_role and wipe_role.members:
-            mentions = ", ".join(m.mention for m in wipe_role.members)
-            await channel.send(f"Wipe started! Participants: {mentions}")
+    members = wipe_role.members
+    total_wipes = len(members)
+    if total_wipes == 0:
+        if channel:
+            await channel.send("Wipe started, but no one participated!")
+        return
+
+    num_builders = 1 if total_wipes <= 5 else 2
+    remaining_slots = total_wipes - num_builders
+    num_fighters = remaining_slots // 2
+    num_farmers = remaining_slots - num_fighters
+
+    choices = data.get("choices", {})
+    karmas = data.get("karma", {})
+    
+    sorted_members = sorted(members, key=lambda m: karmas.get(str(m.id), 0.0), reverse=True)
+    
+    preferred = {"builder": [], "farmer": [], "fighter": []}
+    for m in sorted_members:
+        pref = choices.get(str(m.id))
+        if pref in preferred:
+            preferred[pref].append(m)
         else:
-            await channel.send("Wipe started, but no one has the wipe role!")
+            preferred["farmer"].append(m)
+            
+    final_teams = {"builder": [], "farmer": [], "fighter": []}
+    
+    def fill_role(role_name, limit):
+        while len(final_teams[role_name]) < limit and preferred[role_name]:
+            final_teams[role_name].append(preferred[role_name].pop(0))
+            
+    fill_role("builder", num_builders)
+    fill_role("fighter", num_fighters)
+    fill_role("farmer", num_farmers)
+    
+    leftovers = []
+    for r in ["builder", "farmer", "fighter"]:
+        leftovers.extend(preferred[r])
+        
+    for role_name, limit in [("builder", num_builders), ("fighter", num_fighters), ("farmer", num_farmers)]:
+        while len(final_teams[role_name]) < limit and leftovers:
+            final_teams[role_name].append(leftovers.pop(0))
+            
+    teams_str = "**Final Teams:**\n"
+    for r_name, team_members in final_teams.items():
+        r = discord.utils.get(guild.roles, name=r_name)
+        if r:
+            for m in team_members:
+                await m.add_roles(r)
+        
+        team_mentions = ", ".join([m.mention for m in team_members]) if team_members else "None"
+        teams_str += f"**{r_name.capitalize()}**: {team_mentions}\n"
+        
+    if channel:
+        await channel.send(teams_str)
 
 @bot.tree.command(name="wipe-cancel", description="Cancel the scheduled wipe")
 async def wipe_cancel(interaction: discord.Interaction, message: str):
@@ -275,14 +211,17 @@ async def wipe_cancel(interaction: discord.Interaction, message: str):
     save_data(data)
     
     guild = interaction.guild
-    wipe_role = discord.utils.get(guild.roles, name="wipe")
+    roles_to_strip = ["wipe", "builder", "farmer", "fighter"]
+    roles = [discord.utils.get(guild.roles, name=rn) for rn in roles_to_strip]
+    roles = [r for r in roles if r]
     
     await interaction.response.defer()
     
-    if wipe_role:
-        for member in wipe_role.members:
+    for member in guild.members:
+        member_roles = [r for r in roles if r in member.roles]
+        if member_roles:
             try:
-                await member.remove_roles(wipe_role)
+                await member.remove_roles(*member_roles)
             except discord.Forbidden:
                 pass
                 
@@ -301,17 +240,30 @@ async def wipe_end(interaction: discord.Interaction):
         await interaction.response.send_message("No ongoing wipe found or no participants.", ephemeral=True)
         return
         
-    await interaction.response.send_message("The wipe has ended!")
+    wipe_members = wipe_role.members
+    total_wipes = len(wipe_members)
     
-    for member in wipe_role.members:
-        try:
-            await member.remove_roles(wipe_role)
-        except discord.Forbidden:
-            pass
-
-@bot.tree.command(name="wipe-apply", description="Apply for a role")
-async def wipe_apply(interaction: discord.Interaction):
-    await interaction.response.send_modal(ApplicationModal())
+    await interaction.response.send_message("The wipe has ended! Check your DMs to rate your teammates.")
+    
+    for rater in wipe_members:
+        for target in wipe_members:
+            if rater.id == target.id: continue
+            try:
+                await rater.send(f"Rate **{target.display_name}** (1-4):", view=RatingView(rater.id, target.id, total_wipes))
+            except discord.Forbidden:
+                pass
+                
+    roles_to_strip = ["wipe", "builder", "farmer", "fighter"]
+    roles = [discord.utils.get(guild.roles, name=rn) for rn in roles_to_strip]
+    roles = [r for r in roles if r]
+    
+    for member in guild.members:
+        member_roles = [r for r in roles if r in member.roles]
+        if member_roles:
+            try:
+                await member.remove_roles(*member_roles)
+            except discord.Forbidden:
+                pass
 
 if __name__ == "__main__":
     with open("credentials.json", "r") as f:
