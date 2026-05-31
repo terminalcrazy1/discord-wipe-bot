@@ -12,10 +12,10 @@ class JoinWipeView(discord.ui.View):
     async def join_wipe_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         if any(role in valid_roles for role in interaction.user.roles):
-            await interaction.response.send_message("See you on the spawn beach!")
+            await interaction.response.send_message("See you on the spawn beach!", ephemeral=True)
             await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name="wipe"))
         else:
-            await interaction.response.send_message("Oops! It seems you don't have a role, please /apply and then try again.")
+            await interaction.response.send_message("Oops! It seems you don't have a role, please /apply and then try again.", ephemeral=True)
 
 class WipeBot(commands.Bot):
     def __init__(self):
