@@ -1,6 +1,5 @@
 # Secrets
 credentials.json
-data.json
 
 # Virtual Environment
 bin
@@ -9,5 +8,5 @@ lib
 lib64
 pyvenv.cfg
 
-# Compile Cache
+# Python Cache
 __pycache__
