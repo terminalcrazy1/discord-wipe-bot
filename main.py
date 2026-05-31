@@ -34,14 +34,15 @@ bot = WipeBot()
 @bot.tree.command(name="wipe-schedule", description="Alerts @owns-rust users of an upcoming wipe")
 @app_commands.describe(time="Format: MM-DD HH:MM")
 async def wipe_schedule(interaction: discord.Interaction, time: str):
-    await interaction.response.send_message(content="@owns-rust, there will be a wipe at {time}. Click below to attend:", view=JoinWipeView())
+    role = discord.utils.get(interaction.guild.roles, name="owns-rust")
+    await interaction.response.send_message(content=f"{role.mention} there will be a wipe at {time}. Click below to attend:", view=JoinWipeView())
 
 @bot.tree.command(name="wipe-end", description="Alerts @wipe users about the end of the wipe")
 async def wipe_end(interaction: discord.Interaction):
-    await interaction.response.send_message(content="@wipe, the wipe has ended.")
-    wipe_role = discord.utils.get(interaction.guild.roles, name="wipe")
-    for member in wipe_role.members:
-        await member.remove_roles(wipe_role)
+    role = discord.utils.get(interaction.guild.roles, name="wipe")
+    await interaction.response.send_message(content=f"{role.mention} the wipe has ended.")
+    for member in role.members:
+        await member.remove_roles(role)
 
 @bot.tree.command(name="apply", description="Apply for a role")
 @app_commands.describe(role="Builder, Farmer, or Fighter")
