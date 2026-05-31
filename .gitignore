@@ -8,3 +8,6 @@ include
 lib
 lib64
 pyvenv.cfg
+
+# Python Cache
+__pycache__
