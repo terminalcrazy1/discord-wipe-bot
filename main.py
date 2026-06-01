@@ -2,17 +2,9 @@ import json
 import discord
 from discord import app_commands
 from discord.ext import commands
+from helper import parseInput, hasRole
 
 valid_roles = ["builder", "farmer", "fighter"]
-
-def parseInput(input: str):
-    return input.strip().lower()
-
-def hasRole(interaction: discord.Interaction, roles=valid_roles):
-    for role in roles:
-        if discord.utils.get(interaction.guild.roles, name=role) in interaction.user.roles:
-            return True
-    return False
 
 class JoinWipeView(discord.ui.View):
     def __init__(self):
@@ -56,7 +48,7 @@ async def wipe_end(interaction: discord.Interaction):
 async def apply(interaction: discord.Interaction, role: str):
     if parseInput(role) not in valid_roles:
         await interaction.response.send_message("Oops! That role doesn't exist.", ephemeral=True)   
-    elif not hasRole(interaction):
+    elif not hasRole(interaction, valid_roles):
         parsed_role = parseInput(role)
         await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name=parsed_role))
         await interaction.response.send_message(f"You have been granted the role {parsed_role}. See you on the spawn beach!", ephemeral=True)
@@ -65,7 +57,7 @@ async def apply(interaction: discord.Interaction, role: str):
     
 @bot.tree.command(name="quit", description="Quit a role")
 async def quit(interaction: discord.Interaction):
-    if hasRole(interaction):
+    if hasRole(interaction, valid_roles):
         for role in valid_roles:
             if hasRole(interaction, [role]):
                 await interaction.user.remove_roles(discord.utils.get(interaction.guild.roles, name=role))
