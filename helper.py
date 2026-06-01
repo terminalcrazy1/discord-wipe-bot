@@ -1,9 +1,6 @@
 import json
 import discord
 
-#from discord import app_commands
-#from discord.ext import commands
-
 valid_roles = json.load(open("config.json"))["VALID_ROLES"]
 
 def parseInput(input: str):
