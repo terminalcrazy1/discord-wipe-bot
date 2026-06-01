@@ -1,9 +1,9 @@
 {
     "VALID_ROLES": [
-        "builder",
-        "farmer",
-        "fighter"
+        "your",
+        "roles",
+        "here"
     ],
-    "ELIGIBLE_ROLE": "owns-rust",
-    "WIPE_ROLE": "wipe"
+    "ELIGIBLE_ROLE": "eligible-role-here",
+    "WIPE_ROLE": "wipe-role-here"
 }

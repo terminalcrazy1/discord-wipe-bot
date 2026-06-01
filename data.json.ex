@@ -1,0 +1,3 @@
+{
+    "WIPE_SCHEDULE": "MM-DD HH:MM"
+}
