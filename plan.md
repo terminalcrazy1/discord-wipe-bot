@@ -1,5 +1,5 @@
 ```/wipe-schedule [DD-MM HH:MM]```
-- ask all @owns-rust users if they wish to partipate, and gives them the @wipe role if they do
+- ask all @owns-rust users if they wish to participate, and gives them the @wipe role if they do
 - at wipe time, list @wipe users and their roles + alert all @wipe users about the wipe.
 
 ```/wipe-end```
