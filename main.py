@@ -39,7 +39,7 @@ async def wipe_schedule(interaction: discord.Interaction, time: str):
 @bot.tree.command(name="wipe-end", description="Alerts @wipe users about the end of the wipe")
 async def wipe_end(interaction: discord.Interaction):
     role = discord.utils.get(interaction.guild.roles, name="wipe")
-    await interaction.response.send_message(content=f"{role.mention} the wipe has ended.")
+    await interaction.response.send_message(content=f"{role.mention} the wipe has ended. See you next time!")
     for member in role.members:
         await member.remove_roles(role)
 
@@ -61,7 +61,7 @@ async def quit(interaction: discord.Interaction):
         for role in valid_roles:
             if hasRole(interaction, [role]):
                 await interaction.user.remove_roles(discord.utils.get(interaction.guild.roles, name=role))
-                await interaction.response.send_message(f"You have been removed from the role {role}.", ephemeral=True)
+                await interaction.response.send_message(f"You have been removed from the role {role}. Your rock will be missed :(", ephemeral=True)
                 return
     else:
         await interaction.response.send_message("Oops! It seems you don't have a role.", ephemeral=True)
