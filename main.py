@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 from helper import parseInput, hasRole
 
-valid_roles = json.load(open("config.json")).["VALID_ROLES"]
+valid_roles = json.load(open("config.json"))["VALID_ROLES"]
 eligible_role = json.load(open("config.json"))["ELIGIBLE_ROLE"]
 wipe_role = json.load(open("config.json"))["WIPE_ROLE"]
 
