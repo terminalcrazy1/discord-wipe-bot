@@ -1,6 +1,6 @@
 import discord
 import json
-from helper import hasRole, valid_roles
+from helper import hasRole, parseInput
 
 valid_roles = json.load(open("config.json"))["VALID_ROLES"]
 eligible_role = json.load(open("config.json"))["ELIGIBLE_ROLE"]
