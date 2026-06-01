@@ -10,3 +10,6 @@
 
 ```/quit```
 - remove yourself from your role
+
+**QOL**
+- break out functions into other files
