@@ -1,0 +1,3 @@
+{
+    "BOT_TOKEN": "TOKEN_GOES_HERE"
+}
