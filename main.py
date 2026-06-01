@@ -4,18 +4,20 @@ from discord import app_commands
 from discord.ext import commands
 from helper import parseInput, hasRole
 
-valid_roles = ["builder", "farmer", "fighter"]
+valid_roles = json.load(open("config.json")).["VALID_ROLES"]
+eligible_role = json.load(open("config.json"))["ELIGIBLE_ROLE"]
+wipe_role = json.load(open("config.json"))["WIPE_ROLE"]
 
 class JoinWipeView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     @discord.ui.button(label="Join Wipe", style=discord.ButtonStyle.success, custom_id="join_wipe_btn")
     async def join_wipe_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if hasRole(interaction, ["owns-rust"]):
+        if hasRole(interaction, [f"{eligible_role}"]):
             await interaction.response.send_message("See you on the spawn beach!", ephemeral=True)
-            await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name="wipe"))
+            await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name=f"{wipe_role}"))
         else:
-            await interaction.response.send_message("Oops! It seems you don't have the @owns-rust role, please contact the web master.", ephemeral=True)
+            await interaction.response.send_message(f"Oops! It seems you don't have the {eligible_role} role, please contact the web master.", ephemeral=True)
 
 class WipeBot(commands.Bot):
     def __init__(self):
@@ -30,15 +32,15 @@ class WipeBot(commands.Bot):
 
 bot = WipeBot()
 
-@bot.tree.command(name="wipe-schedule", description="Alerts @owns-rust users of an upcoming wipe")
+@bot.tree.command(name="wipe-schedule", description=f"Alerts {eligible_role} users of an upcoming wipe")
 @app_commands.describe(time="Format: MM-DD HH:MM")
 async def wipe_schedule(interaction: discord.Interaction, time: str):
-    role = discord.utils.get(interaction.guild.roles, name="owns-rust")
+    role = discord.utils.get(interaction.guild.roles, name=f"{eligible_role}")
     await interaction.response.send_message(content=f"{role.mention} there will be a wipe at {time}. Click below to attend:", view=JoinWipeView())
 
-@bot.tree.command(name="wipe-end", description="Alerts @wipe users about the end of the wipe")
+@bot.tree.command(name="wipe-end", description=f"Alerts {wipe_role} users about the end of the wipe")
 async def wipe_end(interaction: discord.Interaction):
-    role = discord.utils.get(interaction.guild.roles, name="wipe")
+    role = discord.utils.get(interaction.guild.roles, name=f"{wipe_role}")
     await interaction.response.send_message(content=f"{role.mention} the wipe has ended. See you next time!")
     for member in role.members:
         await member.remove_roles(role)
@@ -48,7 +50,7 @@ async def wipe_end(interaction: discord.Interaction):
 async def apply(interaction: discord.Interaction, role: str):
     if parseInput(role) not in valid_roles:
         await interaction.response.send_message("Oops! That role doesn't exist.", ephemeral=True)   
-    elif not hasRole(interaction, valid_roles):
+    elif not hasRole(interaction):
         parsed_role = parseInput(role)
         await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name=parsed_role))
         await interaction.response.send_message(f"You have been granted the role {parsed_role}. See you on the spawn beach!", ephemeral=True)
@@ -57,7 +59,7 @@ async def apply(interaction: discord.Interaction, role: str):
     
 @bot.tree.command(name="quit", description="Quit a role")
 async def quit(interaction: discord.Interaction):
-    if hasRole(interaction, valid_roles):
+    if hasRole(interaction):
         for role in valid_roles:
             if hasRole(interaction, [role]):
                 await interaction.user.remove_roles(discord.utils.get(interaction.guild.roles, name=role))
