@@ -23,7 +23,7 @@ class JoinWipeView(discord.ui.View):
             await interaction.response.send_message("See you on the spawn beach!", ephemeral=True)
             await interaction.user.add_roles(discord.utils.get(interaction.guild.roles, name="wipe"))
         else:
-            await interaction.response.send_message("Oops! It seems you don't own rust, please contact the web master.", ephemeral=True)
+            await interaction.response.send_message("Oops! It seems you don't have the @owns-rust role, please contact the web master.", ephemeral=True)
 
 class WipeBot(commands.Bot):
     def __init__(self):
