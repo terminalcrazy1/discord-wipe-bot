@@ -1,12 +1,13 @@
 import json
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from helper import parseInput, hasRole
 from quit import quit_back
 from apply import apply_back
 from wipe_end import wipe_end_back
 from wipe_schedule import wipe_schedule_back, JoinWipeView
+from datetime import datetime
 
 valid_roles = json.load(open("config.json"))["VALID_ROLES"]
 eligible_role = json.load(open("config.json"))["ELIGIBLE_ROLE"]
@@ -21,6 +22,7 @@ class WipeBot(commands.Bot):
     
     async def setup_hook(self):
         self.add_view(JoinWipeView())
+        is_wiping.start()
         await self.tree.sync()
 
 bot = WipeBot()
@@ -42,7 +44,14 @@ async def apply(interaction: discord.Interaction, role: str):
 @bot.tree.command(name="quit", description="Quit a role")
 async def quit(interaction: discord.Interaction):
     await quit_back(interaction)
-    
+
+@tasks.loop(seconds = 10)
+async def is_wiping():
+    if datetime.now().strftime("%m-%d %H:%M") == json.load(open("data.json"))["WIPE_SCHEDULE"]:
+        for guild in bot.guilds:
+            role = discord.utils.get(guild.roles, name=f"{wipe_role}")
+            await guild.system_channel.send(content=f"{role.mention} it is wipe time! Get on the beach.")
+
 if __name__ == "__main__":
     creds = json.load(open("credentials.json"))
     bot.run(creds["BOT_TOKEN"])
