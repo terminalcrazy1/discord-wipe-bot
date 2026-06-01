@@ -18,5 +18,10 @@ class JoinWipeView(discord.ui.View):
             await interaction.response.send_message(f"Oops! It seems you don't have the {eligible_role} role, please contact the web master.", ephemeral=True)
 
 async def wipe_schedule_back(interaction: discord.Interaction, time: str):
+    data = open("data.json", "w")
+    data_dict = {"WIPE_SCHEDULE": time}
+    json.dump(data_dict, data)
+    data.close()
+
     role = discord.utils.get(interaction.guild.roles, name=f"{eligible_role}")
     await interaction.response.send_message(content=f"{role.mention} there will be a wipe at {time}. Click below to attend:", view=JoinWipeView())
