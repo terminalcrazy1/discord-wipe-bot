@@ -4,7 +4,7 @@ from helper import hasRole, valid_roles
 
 valid_roles = json.load(open("config.json"))["VALID_ROLES"]
 eligible_role = json.load(open("config.json"))["ELIGIBLE_ROLE"]
-wipe_role = json.load(open("config.json"))["WIPE_ROLE"]\
+wipe_role = json.load(open("config.json"))["WIPE_ROLE"]
 
 class JoinWipeView(discord.ui.View):
     def __init__(self):
