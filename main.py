@@ -22,7 +22,7 @@ class WipeBot(commands.Bot):
     
     async def setup_hook(self):
         self.add_view(JoinWipeView())
-        is_wiping.start()
+        is_wiping.start(0)
         await self.tree.sync()
 
 bot = WipeBot()
@@ -46,11 +46,15 @@ async def quit(interaction: discord.Interaction):
     await quit_back(interaction)
 
 @tasks.loop(seconds = 10)
-async def is_wiping():
+async def is_wiping(counted: int):
     if datetime.now().strftime("%m-%d %H:%M") == json.load(open("data.json"))["WIPE_SCHEDULE"]:
-        for guild in bot.guilds:
-            role = discord.utils.get(guild.roles, name=f"{wipe_role}")
-            await guild.system_channel.send(content=f"{role.mention} it is wipe time! Get on the beach.")
+        if not counted == 1:
+            counted = 1
+            for guild in bot.guilds:
+                role = discord.utils.get(guild.roles, name=f"{wipe_role}")
+                await guild.system_channel.send(content=f"{role.mention} it is wipe time! Get on the beach.")
+    if not (datetime.now().strftime("%m-%d %H:%M") == json.load(open("data.json"))["WIPE_SCHEDULE"]) and counted == 1:
+        counted = 0
 
 if __name__ == "__main__":
     creds = json.load(open("credentials.json"))
